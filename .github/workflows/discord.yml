@@ -6,9 +6,41 @@ jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Get list of changed files
+        id: changes
+        run: |
+          echo "added=$(git diff --name-only --diff-filter=A HEAD~1 HEAD)" >> $GITHUB_OUTPUT
+          echo "modified=$(git diff --name-only --diff-filter=M HEAD~1 HEAD)" >> $GITHUB_OUTPUT
+          echo "deleted=$(git diff --name-only --diff-filter=D HEAD~1 HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Build Discord message
+        id: msg
+        run: |
+          MESSAGE=""
+          if [ -n "${{ steps.changes.outputs.added }}" ]; then
+            MESSAGE="${MESSAGE}**Added:**\n${{ steps.changes.outputs.added }}\n\n"
+          fi
+          if [ -n "${{ steps.changes.outputs.modified }}" ]; then
+            MESSAGE="${MESSAGE}**Edited:**\n${{ steps.changes.outputs.modified }}\n\n"
+          fi
+          if [ -n "${{ steps.changes.outputs.deleted }}" ]; then
+            MESSAGE="${MESSAGE}**Deleted:**\n${{ steps.changes.outputs.deleted }}\n\n"
+          fi
+
+          # Prevent empty message
+          if [ -z "$MESSAGE" ]; then
+            MESSAGE="A push occurred, but no file-level changes were detected."
+          fi
+
+          # Write output
+          MESSAGE_ESCAPED=$(echo "$MESSAGE" | sed 's/"/\\"/g')
+          echo "message=$MESSAGE_ESCAPED" >> $GITHUB_OUTPUT
+
       - name: Send Discord notification
         run: |
           curl -H "Content-Type: application/json" \
             -X POST \
-            -d "{\"content\": \"GitHub repository updated\"}" \
+            -d "{\"content\": \"${{ steps.msg.outputs.message }}\"}" \
             ${{ secrets.DISCORD_WEBHOOK }}
