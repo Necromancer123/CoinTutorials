@@ -32,16 +32,14 @@ jobs:
             echo "$(basename "$1" .json)"
           }
 
-          # Skip workflow file itself
           skip_file=".github/workflows/discord.yml"
 
-          # Helper to add message line
           add_message() {
             local type="$1"
             local file="$2"
             FILE_NAME=$(basename_noext "$file")
             GITHUB_URL="https://github.com/$REPO_OWNER/$REPO_NAME/blob/$BRANCH/$file"
-            MESSAGE="${MESSAGE}${type} [${FILE_NAME}](${GDB_URL}${FILE_NAME}) [${FILE_NAME}](${GITHUB_URL}) "
+            MESSAGE="${MESSAGE}${type} 🟢 GD Browser Link: ${GDB_URL}${FILE_NAME} | ${FILE_NAME}: ${GITHUB_URL} "
           }
 
           # Added files
@@ -68,7 +66,7 @@ jobs:
             done
           fi
 
-          # Fallback if no relevant files
+          # Fallback
           if [ -z "$MESSAGE" ]; then
             MESSAGE="No tutorial changes detected."
           fi
