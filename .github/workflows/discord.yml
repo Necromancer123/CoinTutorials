@@ -7,6 +7,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2   # <-- THIS FIXES THE PROBLEM
 
       - name: Get list of changed files
         id: changes
@@ -29,12 +31,10 @@ jobs:
             MESSAGE="${MESSAGE}**Deleted:**\n${{ steps.changes.outputs.deleted }}\n\n"
           fi
 
-          # Prevent empty message
           if [ -z "$MESSAGE" ]; then
             MESSAGE="A push occurred, but no file-level changes were detected."
           fi
 
-          # Write output
           MESSAGE_ESCAPED=$(echo "$MESSAGE" | sed 's/"/\\"/g')
           echo "message=$MESSAGE_ESCAPED" >> $GITHUB_OUTPUT
 
