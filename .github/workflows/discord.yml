@@ -13,7 +13,6 @@ jobs:
       - name: Get list of changed files
         id: changes
         run: |
-          # Get added, modified, deleted files
           echo "added=$(git diff --name-only --diff-filter=A HEAD~1 HEAD)" >> $GITHUB_OUTPUT
           echo "modified=$(git diff --name-only --diff-filter=M HEAD~1 HEAD)" >> $GITHUB_OUTPUT
           echo "deleted=$(git diff --name-only --diff-filter=D HEAD~1 HEAD)" >> $GITHUB_OUTPUT
@@ -21,6 +20,10 @@ jobs:
       - name: Build Discord message
         id: msg
         run: |
+          REPO_OWNER=your_github_username
+          REPO_NAME=cointutorials
+          BRANCH=main
+
           MESSAGE=""
 
           # Function to get base filename
@@ -31,25 +34,31 @@ jobs:
           # Added files
           if [ -n "${{ steps.changes.outputs.added }}" ]; then
             for f in ${{ steps.changes.outputs.added }}; do
-              MESSAGE="${MESSAGE}Added tutorial for: $(basename $f) "
+              FILE=$(basename $f)
+              URL="https://github.com/$REPO_OWNER/$REPO_NAME/blob/$BRANCH/$f"
+              MESSAGE="${MESSAGE}Added tutorial for: [$FILE]($URL) "
             done
           fi
 
           # Edited files
           if [ -n "${{ steps.changes.outputs.modified }}" ]; then
             for f in ${{ steps.changes.outputs.modified }}; do
-              MESSAGE="${MESSAGE}Edited tutorial for: $(basename $f) "
+              FILE=$(basename $f)
+              URL="https://github.com/$REPO_OWNER/$REPO_NAME/blob/$BRANCH/$f"
+              MESSAGE="${MESSAGE}Edited tutorial for: [$FILE]($URL) "
             done
           fi
 
           # Deleted files
           if [ -n "${{ steps.changes.outputs.deleted }}" ]; then
             for f in ${{ steps.changes.outputs.deleted }}; do
-              MESSAGE="${MESSAGE}Deleted tutorial for: $(basename $f) "
+              FILE=$(basename $f)
+              URL="https://github.com/$REPO_OWNER/$REPO_NAME/blob/$BRANCH/$f"
+              MESSAGE="${MESSAGE}Deleted tutorial for: [$FILE]($URL) "
             done
           fi
 
-          # Fallback if no changes
+          # Fallback
           if [ -z "$MESSAGE" ]; then
             MESSAGE="A push occurred, but no file-level changes were detected."
           fi
