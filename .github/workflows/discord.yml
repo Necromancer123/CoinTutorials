@@ -8,11 +8,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2   # <-- THIS FIXES THE PROBLEM
+          fetch-depth: 2
 
       - name: Get list of changed files
         id: changes
         run: |
+          # Get added, modified, deleted files
           echo "added=$(git diff --name-only --diff-filter=A HEAD~1 HEAD)" >> $GITHUB_OUTPUT
           echo "modified=$(git diff --name-only --diff-filter=M HEAD~1 HEAD)" >> $GITHUB_OUTPUT
           echo "deleted=$(git diff --name-only --diff-filter=D HEAD~1 HEAD)" >> $GITHUB_OUTPUT
@@ -21,20 +22,39 @@ jobs:
         id: msg
         run: |
           MESSAGE=""
+
+          # Function to get base filename
+          basename() {
+            echo "$(echo "$1" | sed 's|.*/||')"
+          }
+
+          # Added files
           if [ -n "${{ steps.changes.outputs.added }}" ]; then
-            MESSAGE="${MESSAGE}Added tutorial for: ${{ steps.changes.outputs.added }}"
-          fi
-          if [ -n "${{ steps.changes.outputs.modified }}" ]; then
-            MESSAGE="${MESSAGE}Edited tutorial for: ${{ steps.changes.outputs.modified }}"
-          fi
-          if [ -n "${{ steps.changes.outputs.deleted }}" ]; then
-            MESSAGE="${MESSAGE}Deleted tutorial for: ${{ steps.changes.outputs.deleted }}"
+            for f in ${{ steps.changes.outputs.added }}; do
+              MESSAGE="${MESSAGE}Added tutorial for: $(basename $f) "
+            done
           fi
 
+          # Edited files
+          if [ -n "${{ steps.changes.outputs.modified }}" ]; then
+            for f in ${{ steps.changes.outputs.modified }}; do
+              MESSAGE="${MESSAGE}Edited tutorial for: $(basename $f) "
+            done
+          fi
+
+          # Deleted files
+          if [ -n "${{ steps.changes.outputs.deleted }}" ]; then
+            for f in ${{ steps.changes.outputs.deleted }}; do
+              MESSAGE="${MESSAGE}Deleted tutorial for: $(basename $f) "
+            done
+          fi
+
+          # Fallback if no changes
           if [ -z "$MESSAGE" ]; then
             MESSAGE="A push occurred, but no file-level changes were detected."
           fi
 
+          # Escape quotes for JSON
           MESSAGE_ESCAPED=$(echo "$MESSAGE" | sed 's/"/\\"/g')
           echo "message=$MESSAGE_ESCAPED" >> $GITHUB_OUTPUT
 
