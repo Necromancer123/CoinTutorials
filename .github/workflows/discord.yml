@@ -20,47 +20,57 @@ jobs:
       - name: Build Discord message
         id: msg
         run: |
-          REPO_OWNER=your_github_username
-          REPO_NAME=cointutorials
+          REPO_OWNER=Necromancer123
+          REPO_NAME=CoinTutorials
           BRANCH=main
+          GDB_URL=https://gdbrowser.com/
 
           MESSAGE=""
 
-          # Function to get base filename
-          basename() {
-            echo "$(echo "$1" | sed 's|.*/||')"
+          # Function to get base filename without extension
+          basename_noext() {
+            echo "$(basename "$1" .json)"
+          }
+
+          # Skip workflow file itself
+          skip_file=".github/workflows/discord.yml"
+
+          # Helper to add message line
+          add_message() {
+            local type="$1"
+            local file="$2"
+            FILE_NAME=$(basename_noext "$file")
+            GITHUB_URL="https://github.com/$REPO_OWNER/$REPO_NAME/blob/$BRANCH/$file"
+            MESSAGE="${MESSAGE}${type} [${FILE_NAME}](${GDB_URL}${FILE_NAME}) [${FILE_NAME}](${GITHUB_URL}) "
           }
 
           # Added files
           if [ -n "${{ steps.changes.outputs.added }}" ]; then
             for f in ${{ steps.changes.outputs.added }}; do
-              FILE=$(basename $f)
-              URL="https://github.com/$REPO_OWNER/$REPO_NAME/blob/$BRANCH/$f"
-              MESSAGE="${MESSAGE}Added tutorial for: [$FILE]($URL) "
+              [ "$f" = "$skip_file" ] && continue
+              add_message "Added tutorial for:" "$f"
             done
           fi
 
           # Edited files
           if [ -n "${{ steps.changes.outputs.modified }}" ]; then
             for f in ${{ steps.changes.outputs.modified }}; do
-              FILE=$(basename $f)
-              URL="https://github.com/$REPO_OWNER/$REPO_NAME/blob/$BRANCH/$f"
-              MESSAGE="${MESSAGE}Edited tutorial for: [$FILE]($URL) "
+              [ "$f" = "$skip_file" ] && continue
+              add_message "Edited tutorial for:" "$f"
             done
           fi
 
           # Deleted files
           if [ -n "${{ steps.changes.outputs.deleted }}" ]; then
             for f in ${{ steps.changes.outputs.deleted }}; do
-              FILE=$(basename $f)
-              URL="https://github.com/$REPO_OWNER/$REPO_NAME/blob/$BRANCH/$f"
-              MESSAGE="${MESSAGE}Deleted tutorial for: [$FILE]($URL) "
+              [ "$f" = "$skip_file" ] && continue
+              add_message "Deleted tutorial for:" "$f"
             done
           fi
 
-          # Fallback
+          # Fallback if no relevant files
           if [ -z "$MESSAGE" ]; then
-            MESSAGE="A push occurred, but no file-level changes were detected."
+            MESSAGE="No tutorial changes detected."
           fi
 
           # Escape quotes for JSON
