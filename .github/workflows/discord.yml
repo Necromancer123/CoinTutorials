@@ -39,7 +39,7 @@ jobs:
             local file="$2"
             FILE_NAME=$(basename_noext "$file")
             GITHUB_URL="https://github.com/$REPO_OWNER/$REPO_NAME/blob/$BRANCH/$file"
-            MESSAGE="${MESSAGE}${type} 🟢 GD Browser Link: ${GDB_URL}${FILE_NAME} | ${FILE_NAME}: ${GITHUB_URL} "
+            MESSAGE="${MESSAGE}${type} ${FILE_NAME}: ${GITHUB_URL}. GD Browser Link: ${GDB_URL}${FILE_NAME} "
           }
 
           # Added files
