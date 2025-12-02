@@ -22,13 +22,13 @@ jobs:
         run: |
           MESSAGE=""
           if [ -n "${{ steps.changes.outputs.added }}" ]; then
-            MESSAGE="${MESSAGE}**Added:**\n${{ steps.changes.outputs.added }}\n\n"
+            MESSAGE="${MESSAGE}Added tutorial for: {{ steps.changes.outputs.added }}"
           fi
           if [ -n "${{ steps.changes.outputs.modified }}" ]; then
-            MESSAGE="${MESSAGE}**Edited:**\n${{ steps.changes.outputs.modified }}\n\n"
+            MESSAGE="${MESSAGE}Edited tutorial for: {{ steps.changes.outputs.modified }}"
           fi
           if [ -n "${{ steps.changes.outputs.deleted }}" ]; then
-            MESSAGE="${MESSAGE}**Deleted:**\n${{ steps.changes.outputs.deleted }}\n\n"
+            MESSAGE="${MESSAGE}Deleted tutorial for: {{ steps.changes.outputs.deleted }}"
           fi
 
           if [ -z "$MESSAGE" ]; then
