@@ -79,5 +79,5 @@ jobs:
         run: |
           curl -H "Content-Type: application/json" \
             -X POST \
-            -d "{\"content\": \"${{ steps.msg.outputs.message }}\"}" \
+            -d "{\"content\": \"${{ steps.msg.outputs.message }}\", \"flags\": 4}" \
             ${{ secrets.DISCORD_WEBHOOK }}
