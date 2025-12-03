@@ -15,69 +15,70 @@ jobs:
         run: |
           echo "added=$(git diff --name-only --diff-filter=A HEAD~1 HEAD)" >> $GITHUB_OUTPUT
           echo "modified=$(git diff --name-only --diff-filter=M HEAD~1 HEAD)" >> $GITHUB_OUTPUT
-          echo "deleted=$(git diff --name-only --diff-filter=D HEAD~1 HEAD)" >> $GITHUB_OUTPUT
+          echo "deleted=$(git.diff --name-only --diff-filter=D HEAD~1 HEAD)" >> $GITHUB_OUTPUT
 
-      - name: Build Discord message
+      - name: Build Discord embed
         id: msg
         run: |
-          REPO_OWNER=Necromancer123
-          REPO_NAME=CoinTutorials
-          BRANCH=main
-          GDB_URL=https://gdbrowser.com/
-
-          MESSAGE=""
-
-          # Function to get base filename without extension
-          basename_noext() {
-            echo "$(basename "$1" .json)"
-          }
-
+          REPO_OWNER="Necromancer123"
+          REPO_NAME="CoinTutorials"
+          BRANCH="main"
+          GDB_URL="https://gdbrowser.com/"
           skip_file=".github/workflows/discord.yml"
 
-          add_message() {
+          make_field() {
             local type="$1"
             local file="$2"
-            FILE_NAME=$(basename_noext "$file")
+            local color="$3"
+
+            FILE_NAME=$(basename "$file" .json)
             GITHUB_URL="https://github.com/$REPO_OWNER/$REPO_NAME/blob/$BRANCH/$file"
-            MESSAGE="${MESSAGE}${type} [${FILE_NAME}](${GDB_URL}${FILE_NAME}). ${GITHUB_URL} "
+            GDB_LINK="${GDB_URL}${FILE_NAME}"
+
+            printf '{"title":"%s","value":"GD Browser Link: %s\nGitHub: %s","inline":false,"color":"%s"}' \
+              "$type $FILE_NAME" "$GDB_LINK" "$GITHUB_URL" "$color"
           }
 
-          # Added files
+          FIELDS="[]"
+
+          add_field() {
+            local json="$1"
+            FIELDS=$(echo "$FIELDS" | jq --argjson f "$json" '. += [$f]')
+          }
+
+          # Added
           if [ -n "${{ steps.changes.outputs.added }}" ]; then
             for f in ${{ steps.changes.outputs.added }}; do
               [ "$f" = "$skip_file" ] && continue
-              add_message "Added tutorial for:" "$f"
+              add_field "$(make_field Added "$f" "65280")"    # bright green
             done
           fi
 
-          # Edited files
+          # Modified
           if [ -n "${{ steps.changes.outputs.modified }}" ]; then
             for f in ${{ steps.changes.outputs.modified }}; do
               [ "$f" = "$skip_file" ] && continue
-              add_message "Edited tutorial for:" "$f"
+              add_field "$(make_field Edited "$f" "16776960")" # yellow
             done
           fi
 
-          # Deleted files
+          # Deleted
           if [ -n "${{ steps.changes.outputs.deleted }}" ]; then
             for f in ${{ steps.changes.outputs.deleted }}; do
               [ "$f" = "$skip_file" ] && continue
-              add_message "Deleted tutorial for:" "$f"
+              add_field "$(make_field Deleted "$f" "16711680")" # red
             done
           fi
 
-          # Fallback
-          if [ -z "$MESSAGE" ]; then
-            MESSAGE="No tutorial changes detected."
+          if [ "$(echo "$FIELDS" | jq length)" -eq 0 ]; then
+            FIELDS='[{"title":"No tutorial changes detected.","value":"","inline":false,"color":"0"}]'
           fi
 
-          # Escape quotes for JSON
-          MESSAGE_ESCAPED=$(echo "$MESSAGE" | sed 's/"/\\"/g')
-          echo "message=$MESSAGE_ESCAPED" >> $GITHUB_OUTPUT
+          echo "embed=$(jq -n --argjson fields "$FIELDS" '{embeds:[{title:"Tutorial Updates",fields:$fields}]}' | sed 's/"/\\"/g')" >> $GITHUB_OUTPUT
 
       - name: Send Discord notification
         run: |
           curl -H "Content-Type: application/json" \
             -X POST \
-            -d "{\"content\": \"${{ steps.msg.outputs.message }}\", \"flags\": 4}" \
+            -d "{\"embeds\": ${{ steps.msg.outputs.embed }} }" \
             ${{ secrets.DISCORD_WEBHOOK }}
