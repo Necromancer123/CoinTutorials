@@ -17,36 +17,42 @@ jobs:
           echo "modified=$(git diff --name-only --diff-filter=M HEAD~1 HEAD)" >> $GITHUB_OUTPUT
           echo "deleted=$(git diff --name-only --diff-filter=D HEAD~1 HEAD)" >> $GITHUB_OUTPUT
 
-      - name: Build Discord message
+      - name: Build Discord embed JSON
         id: msg
         run: |
           REPO_OWNER=Necromancer123
           REPO_NAME=CoinTutorials
           BRANCH=main
           GDB_URL=https://gdbrowser.com/
+          skip_file=".github/workflows/discord.yml"
 
-          MESSAGE=""
+          EMBEDS="[]"
 
-          # Function to get base filename without extension
           basename_noext() {
             echo "$(basename "$1" .json)"
           }
 
-          skip_file=".github/workflows/discord.yml"
-
-          add_message() {
+          add_embed() {
             local type="$1"
-            local file="$2"
+            local emoji="$2"
+            local file="$3"
             FILE_NAME=$(basename_noext "$file")
             GITHUB_URL="https://github.com/$REPO_OWNER/$REPO_NAME/blob/$BRANCH/$file"
-            MESSAGE="${MESSAGE}${type} ${FILE_NAME}: ${GITHUB_URL}. GD Browser Link: ${GDB_URL}${FILE_NAME} "
+            DESCRIPTION="${emoji} [GD Browser Link](${GDB_URL}${FILE_NAME}) | [${FILE_NAME}](${GITHUB_URL})"
+
+            EMBED_JSON=$(jq -n \
+              --arg title "$type $FILE_NAME" \
+              --arg description "$DESCRIPTION" \
+              '{title: $title, description: $description, color: 7506394}')
+            
+            EMBEDS=$(echo "$EMBEDS" | jq ". + [$EMBED_JSON]")
           }
 
           # Added files
           if [ -n "${{ steps.changes.outputs.added }}" ]; then
             for f in ${{ steps.changes.outputs.added }}; do
               [ "$f" = "$skip_file" ] && continue
-              add_message "Added tutorial for:" "$f"
+              add_embed "Added tutorial for: " "$f"
             done
           fi
 
@@ -54,7 +60,7 @@ jobs:
           if [ -n "${{ steps.changes.outputs.modified }}" ]; then
             for f in ${{ steps.changes.outputs.modified }}; do
               [ "$f" = "$skip_file" ] && continue
-              add_message "Edited tutorial for:" "$f"
+              add_embed "Edited tutorial for: " "$f"
             done
           fi
 
@@ -62,22 +68,21 @@ jobs:
           if [ -n "${{ steps.changes.outputs.deleted }}" ]; then
             for f in ${{ steps.changes.outputs.deleted }}; do
               [ "$f" = "$skip_file" ] && continue
-              add_message "Deleted tutorial for:" "$f"
+              add_embed "Deleted tutorial for: " "$f"
             done
           fi
 
-          # Fallback
-          if [ -z "$MESSAGE" ]; then
-            MESSAGE="No tutorial changes detected."
+          if [ "$EMBEDS" = "[]" ]; then
+            MESSAGE="{\"content\": \"No tutorial changes detected.\"}"
+          else
+            MESSAGE=$(jq -n --argjson embeds "$EMBEDS" '{embeds: $embeds}')
           fi
 
-          # Escape quotes for JSON
-          MESSAGE_ESCAPED=$(echo "$MESSAGE" | sed 's/"/\\"/g')
-          echo "message=$MESSAGE_ESCAPED" >> $GITHUB_OUTPUT
+          echo "message=$MESSAGE" >> $GITHUB_OUTPUT
 
-      - name: Send Discord notification
+      - name: Send Discord embed
         run: |
           curl -H "Content-Type: application/json" \
             -X POST \
-            -d "{\"content\": \"${{ steps.msg.outputs.message }}\"}" \
+            -d "${{ steps.msg.outputs.message }}" \
             ${{ secrets.DISCORD_WEBHOOK }}
